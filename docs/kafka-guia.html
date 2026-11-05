@@ -1,0 +1,499 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Guía de Kafka Activo-Activo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: una columna de lectura (84ch) como el guion; el diagrama y las tablas anchas se desplazan en horizontal dentro de su caja. */
+:root {
+  --bg: #f4f6fb; --surface: #ffffff; --surface-2: #eaeff8; --fg: #14213d; --muted: #5b6b8c; --line: #d6dcea;
+  --accent: #1f6feb; --accent-soft: #e3edff; --ok: #15803d; --warn: #b45309; --crit: #b91c1c; --purple: #6d28d9;
+  --display: "Manrope", "Segoe UI", Helvetica, Arial, sans-serif;
+  --body: "IBM Plex Sans", "Segoe UI", Helvetica, Arial, sans-serif;
+  --mono: "IBM Plex Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0b1626; --surface: #122c4d; --surface-2: #16233c; --fg: #e6edf7; --muted: #9fb0c9; --line: #2c5f9e;
+    --accent: #4da3ff; --accent-soft: #163a66; --ok: #4ade80; --warn: #fbbf24; --crit: #f87171; --purple: #c084fc;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0b1626; --surface: #122c4d; --surface-2: #16233c; --fg: #e6edf7; --muted: #9fb0c9; --line: #2c5f9e;
+  --accent: #4da3ff; --accent-soft: #163a66; --ok: #4ade80; --warn: #fbbf24; --crit: #f87171; --purple: #c084fc;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--fg); font: 16px/1.55 var(--body); padding-block: 0 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+main { max-width: 84ch; margin: 0 auto; }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(1.7rem, 4vw, 2.4rem); font-weight: 800; line-height: 1.15; }
+h2 { font-size: 1.35rem; font-weight: 800; margin-top: 2.6rem; margin-bottom: .6rem; padding-top: .4rem; }
+h3 { font-size: 1.05rem; font-weight: 600; margin-top: 1.4rem; margin-bottom: .3rem; }
+p { margin: .5rem 0; }
+a { color: var(--accent); }
+code { font-family: var(--mono); font-size: .88em; background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }
+pre code { background: none; padding: 0; font-size: inherit; }
+.eyebrow { font-size: .74rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.hero { padding-block: 28px 18px; border-bottom: 1px solid var(--line); }
+.hero p.lead { color: var(--muted); max-width: 66ch; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.chip { font-size: .8rem; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--muted); }
+.chip b { color: var(--fg); font-weight: 600; }
+.toc { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 8px; margin-top: 14px; }
+.toc a { display: block; text-decoration: none; color: inherit; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; min-width: 0; font-size: .92rem; font-weight: 600; }
+.toc a span { display: block; font-weight: 400; font-size: .8rem; color: var(--muted); }
+.toc a:hover, .toc a:focus-visible { border-color: var(--accent); outline: none; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px 20px; margin-top: 14px; }
+.callout { border-left: 3px solid var(--accent); background: var(--surface-2); border-radius: 10px; padding: 10px 14px; margin: 12px 0; font-size: .95rem; }
+.callout.warn { border-left-color: var(--warn); }
+.callout.ok { border-left-color: var(--ok); }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin-top: 12px; }
+.grid > div { min-width: 0; }
+.el { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+.el h3 { margin-top: 0; font-size: .98rem; }
+.el p { font-size: .92rem; margin: .3rem 0 0; }
+.el .where { font-family: var(--mono); font-size: .74rem; color: var(--muted); margin-top: 6px; overflow-wrap: anywhere; }
+table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+th, td { text-align: left; vertical-align: top; padding: 7px 9px; border-bottom: 1px solid var(--line); }
+th { font-size: .76rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+td code { white-space: nowrap; }
+.tbl { overflow-x: auto; margin-top: 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+.tbl table { min-width: 560px; }
+.num { font-variant-numeric: tabular-nums; font-family: var(--mono); font-size: .86em; }
+.diagram { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 10px; margin-top: 12px; }
+.diagram svg { display: block; min-width: 820px; width: 100%; height: auto; }
+pre { position: relative; margin: 10px 0 0; background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 86px 12px 14px; overflow-x: auto; font: .84rem/1.5 var(--mono); }
+pre code { white-space: pre; }
+pre .copy { position: absolute; top: 8px; right: 8px; font: 600 .74rem var(--body); padding: 4px 9px; border-radius: 6px; border: 1px solid var(--line); background: var(--surface); color: var(--accent); cursor: pointer; }
+pre .copy:focus-visible { outline: 2px solid var(--accent); }
+.out { border-left: 3px solid var(--ok); }
+.out::before { content: "salida real · 2026-11-04"; display: block; font: 600 .7rem var(--body); letter-spacing: .06em; text-transform: uppercase; color: var(--ok); margin-bottom: 6px; }
+.steps { margin: 8px 0 0; padding-left: 1.3rem; }
+.steps li { margin-top: 6px; }
+.steps li::marker { font-family: var(--mono); color: var(--accent); }
+.kv { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; font-size: .92rem; margin-top: 8px; }
+.kv dt { font-family: var(--mono); font-size: .82em; color: var(--muted); }
+.kv dd { margin: 0; min-width: 0; }
+.timeline { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 6px; }
+.timeline li { display: grid; grid-template-columns: 110px 1fr; gap: 12px; align-items: baseline; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; }
+.timeline .t { font-family: var(--mono); font-size: .8rem; color: var(--accent); font-variant-numeric: tabular-nums; }
+.timeline .b { color: var(--purple); }
+@media (max-width: 560px) { .timeline li { grid-template-columns: 1fr; gap: 2px; } .kv { grid-template-columns: 1fr; } }
+footer { margin-top: 3rem; padding-top: 14px; border-top: 1px solid var(--line); color: var(--muted); font-size: .85rem; }
+@media (prefers-reduced-motion: no-preference) { .toc a, pre .copy { transition: border-color .15s, background .15s; } }
+</style>
+</head>
+<body>
+<main>
+
+<section class="hero">
+  <div class="eyebrow">Demo activo-activo en Azure · Región A Central US · Región B Canada Central</div>
+  <h1>Guía de Kafka Activo-Activo</h1>
+  <p class="lead">Qué hace Apache Kafka en la demo, cómo está configurado en cada región, qué piezas logran la replicación bidireccional y cómo ver las "colas" (topics y rezago de consumidores) desde tu Mac, dentro de la VM o con una interfaz gráfica.</p>
+  <div class="chips">
+    <span class="chip"><b>apache/kafka 3.9.1</b> · KRaft, 1 nodo por región</span>
+    <span class="chip"><b>Debezium 3.1.3</b> · Kafka Connect</span>
+    <span class="chip"><b>1 topic de datos por región</b> · 1 partición · 7 días</span>
+    <span class="chip"><b>Replicación pull</b> cruzada por peering</span>
+    <span class="chip"><b>Kafbat UI 1.5.0</b> · consola en /kafka-ui/</span>
+  </div>
+  <nav class="toc" aria-label="Secciones">
+    <a href="#colas">1 · Dónde están las colas<span>topics, offsets y lag</span></a>
+    <a href="#config">2 · Configuración<span>broker, Connect, conector</span></a>
+    <a href="#elementos">3 · Piezas del activo-activo<span>CDC, pull, anti-eco, LWW</span></a>
+    <a href="#evento">4 · Un evento real<span>trazado de extremo a extremo</span></a>
+    <a href="#comandos">5 · Guía de comandos<span>Mac, VM, Connect, Redis</span></a>
+    <a href="#gui">6 · Interfaz gráfica<span>Kafbat UI por región, con contraseña</span></a>
+    <a href="#caos">7 · Ver crecer una cola<span>escenarios de caos</span></a>
+    <a href="#glosario">8 · Glosario<span>offset, marca de agua, slot…</span></a>
+  </nav>
+</section>
+
+<h2 id="colas">1 · Dónde están las "colas"</h2>
+<p>En Kafka no hay colas que se vacían: hay <b>topics</b>, que son registros (logs) sólo de escritura. Cada evento recibe un <b>offset</b> consecutivo y se queda en disco hasta que vence la retención (aquí 7 días). Cada consumidor recuerda hasta qué offset ha leído mediante un <b>grupo de consumidores</b>. La "cola pendiente" es la diferencia entre el fin del log y el offset confirmado por el grupo: el <b>LAG</b>.</p>
+<p>En esta demo hay exactamente dos colas que importan, una por sentido de la replicación:</p>
+<div class="tbl"><table>
+  <thead><tr><th>Cola</th><th>Vive en</th><th>Quién escribe</th><th>Quién lee (grupo)</th><th>Medido hoy</th></tr></thead>
+  <tbody>
+    <tr><td><code>cdc.a.public.tickets</code></td><td>Kafka A (VM A, 10.10.1.10)</td><td>Debezium A, con cada INSERT/UPDATE en Postgres A</td><td>Replicator de B, grupo <code>replicator-b</code>, conectado desde 10.20.1.10</td><td class="num">fin 22 · confirmado 22 · LAG 0</td></tr>
+    <tr><td><code>cdc.b.public.tickets</code></td><td>Kafka B (VM B, 10.20.1.10)</td><td>Debezium B, con cada INSERT/UPDATE en Postgres B</td><td>Replicator de A, grupo <code>replicator-a</code>, conectado desde 10.10.1.10</td><td class="num">fin 20 · confirmado 20 · LAG 0</td></tr>
+  </tbody>
+</table></div>
+<div class="callout">Los offsets del grupo <code>replicator-b</code> se guardan en <b>Kafka A</b> (el Kafka del que lee). Por eso, si la región B se cae, la cola hacia B crece en el disco de A y se drena sola cuando B vuelve. El endpoint <code>/status</code> de cada API publica esa cifra como <code>kafka.outbound_pending</code> y <code>scripts/status.sh</code> la muestra como "pendientes para el par".</div>
+<p>Los demás topics son internos y no hace falta mirarlos: <code>__consumer_offsets</code> (offsets de los grupos), <code>_connect_configs</code>, <code>_connect_offsets</code> y <code>_connect_status</code> (estado de Kafka Connect), <code>cdc.&lt;r&gt;.public.dbz_heartbeat</code> y <code>__debezium-heartbeat.cdc.&lt;r&gt;</code> (latido de Debezium cada 10 s, que mantiene el slot de Postgres avanzando aunque no haya tráfico).</p>
+
+<h2 id="config">2 · Cómo está configurado Kafka</h2>
+<p>Cada región tiene su <b>propio clúster Kafka de un nodo</b> (cluster id distinto, definido en <code>.env.deploy</code>). No es un clúster estirado entre regiones ni usa MirrorMaker: lo que cruza el peering es un consumidor normal, el Replicator, leyendo el Kafka de la otra región.</p>
+<div class="diagram" role="img" aria-label="Flujo de replicación: Postgres, Debezium y Kafka de cada región; el Replicator de la otra región consume por el peering y aplica en su Postgres">
+<svg viewBox="0 0 1020 400" xmlns="http://www.w3.org/2000/svg" font-family="IBM Plex Sans, Segoe UI, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--muted)"/></marker>
+  </defs>
+  <text x="250" y="26" text-anchor="middle" font-size="13" font-weight="600" style="fill:var(--fg)">Región A · Central US · VM 10.10.1.10</text>
+  <text x="770" y="26" text-anchor="middle" font-size="13" font-weight="600" style="fill:var(--fg)">Región B · Canada Central · VM 10.20.1.10</text>
+  <line x1="510" y1="38" x2="510" y2="392" stroke-dasharray="5 5" stroke-width="1.5" style="stroke:var(--line)"/>
+  <text x="510" y="52" text-anchor="middle" font-size="10.5" style="fill:var(--muted)">peering global · NSG: 9092 sólo desde la VNet par</text>
+
+  <text x="20" y="66" font-size="11" font-weight="600" style="fill:var(--muted)">A → B · un cambio hecho en A</text>
+  <rect x="20" y="76" width="120" height="58" rx="8" style="fill:var(--surface);stroke:var(--line)"/>
+  <text x="80" y="100" text-anchor="middle" font-size="12.5" font-weight="600" style="fill:var(--fg)">PostgreSQL A</text>
+  <text x="80" y="118" text-anchor="middle" font-size="10.5" font-family="IBM Plex Mono, Menlo, monospace" style="fill:var(--muted)">slot dbz_a · dbz_pub</text>
+  <line x1="140" y1="105" x2="173" y2="105" stroke-width="1.6" marker-end="url(#ah)" style="stroke:var(--muted)"/>
+  <text x="157" y="97" text-anchor="middle" font-size="9.5" style="fill:var(--muted)">WAL</text>
+  <rect x="175" y="76" width="120" height="58" rx="8" style="fill:var(--surface);stroke:var(--line)"/>
+  <text x="235" y="100" text-anchor="middle" font-size="12.5" font-weight="600" style="fill:var(--fg)">Debezium A</text>
+  <text x="235" y="118" text-anchor="middle" font-size="10.5" font-family="IBM Plex Mono, Menlo, monospace" style="fill:var(--muted)">pg-source-a</text>
+  <line x1="295" y1="105" x2="328" y2="105" stroke-width="1.6" marker-end="url(#ah)" style="stroke:var(--muted)"/>
+  <text x="312" y="97" text-anchor="middle" font-size="9.5" style="fill:var(--muted)">JSON</text>
+  <rect x="330" y="76" width="150" height="58" rx="8" style="fill:var(--accent-soft);stroke:var(--accent)"/>
+  <text x="405" y="100" text-anchor="middle" font-size="12.5" font-weight="600" style="fill:var(--fg)">Kafka A</text>
+  <text x="405" y="118" text-anchor="middle" font-size="10.5" font-family="IBM Plex Mono, Menlo, monospace" style="fill:var(--muted)">cdc.a.public.tickets</text>
+  <line x1="480" y1="105" x2="538" y2="105" stroke-width="2" marker-end="url(#ah)" style="stroke:var(--accent)"/>
+  <text x="510" y="150" text-anchor="middle" font-size="10" style="fill:var(--accent)">pull · 10.10.1.10:9092</text>
+  <text x="510" y="163" text-anchor="middle" font-size="10" style="fill:var(--accent)">offsets de replicator-b en Kafka A</text>
+  <rect x="540" y="76" width="150" height="58" rx="8" style="fill:var(--surface-2);stroke:var(--purple)"/>
+  <text x="615" y="100" text-anchor="middle" font-size="12.5" font-weight="600" style="fill:var(--fg)">Replicator B</text>
+  <text x="615" y="118" text-anchor="middle" font-size="10.5" font-family="IBM Plex Mono, Menlo, monospace" style="fill:var(--muted)">grupo replicator-b</text>
+  <line x1="690" y1="105" x2="878" y2="105" stroke-width="1.6" marker-end="url(#ah)" style="stroke:var(--muted)"/>
+  <text x="784" y="97" text-anchor="middle" font-size="9.5" style="fill:var(--muted)">upsert LWW · anti-eco · invalida Redis</text>
+  <rect x="880" y="76" width="120" height="58" rx="8" style="fill:var(--surface);stroke:var(--line)"/>
+  <text x="940" y="100" text-anchor="middle" font-size="12.5" font-weight="600" style="fill:var(--fg)">PostgreSQL B</text>
+  <text x="940" y="118" text-anchor="middle" font-size="10.5" font-family="IBM Plex Mono, Menlo, monospace" style="fill:var(--muted)">origin_region = a</text>
+
+  <text x="1000" y="226" text-anchor="end" font-size="11" font-weight="600" style="fill:var(--muted)">B → A · un cambio hecho en B</text>
+  <rect x="880" y="236" width="120" height="58" rx="8" style="fill:var(--surface);stroke:var(--line)"/>
+  <text x="940" y="260" text-anchor="middle" font-size="12.5" font-weight="600" style="fill:var(--fg)">PostgreSQL B</text>
+  <text x="940" y="278" text-anchor="middle" font-size="10.5" font-family="IBM Plex Mono, Menlo, monospace" style="fill:var(--muted)">slot dbz_b · dbz_pub</text>
+  <line x1="880" y1="265" x2="847" y2="265" stroke-width="1.6" marker-end="url(#ah)" style="stroke:var(--muted)"/>
+  <text x="863" y="257" text-anchor="middle" font-size="9.5" style="fill:var(--muted)">WAL</text>
+  <rect x="725" y="236" width="120" height="58" rx="8" style="fill:var(--surface);stroke:var(--line)"/>
+  <text x="785" y="260" text-anchor="middle" font-size="12.5" font-weight="600" style="fill:var(--fg)">Debezium B</text>
+  <text x="785" y="278" text-anchor="middle" font-size="10.5" font-family="IBM Plex Mono, Menlo, monospace" style="fill:var(--muted)">pg-source-b</text>
+  <line x1="725" y1="265" x2="692" y2="265" stroke-width="1.6" marker-end="url(#ah)" style="stroke:var(--muted)"/>
+  <text x="708" y="257" text-anchor="middle" font-size="9.5" style="fill:var(--muted)">JSON</text>
+  <rect x="540" y="236" width="150" height="58" rx="8" style="fill:var(--accent-soft);stroke:var(--accent)"/>
+  <text x="615" y="260" text-anchor="middle" font-size="12.5" font-weight="600" style="fill:var(--fg)">Kafka B</text>
+  <text x="615" y="278" text-anchor="middle" font-size="10.5" font-family="IBM Plex Mono, Menlo, monospace" style="fill:var(--muted)">cdc.b.public.tickets</text>
+  <line x1="540" y1="265" x2="482" y2="265" stroke-width="2" marker-end="url(#ah)" style="stroke:var(--accent)"/>
+  <text x="510" y="310" text-anchor="middle" font-size="10" style="fill:var(--accent)">pull · 10.20.1.10:9092</text>
+  <text x="510" y="323" text-anchor="middle" font-size="10" style="fill:var(--accent)">offsets de replicator-a en Kafka B</text>
+  <rect x="330" y="236" width="150" height="58" rx="8" style="fill:var(--surface-2);stroke:var(--purple)"/>
+  <text x="405" y="260" text-anchor="middle" font-size="12.5" font-weight="600" style="fill:var(--fg)">Replicator A</text>
+  <text x="405" y="278" text-anchor="middle" font-size="10.5" font-family="IBM Plex Mono, Menlo, monospace" style="fill:var(--muted)">grupo replicator-a</text>
+  <line x1="330" y1="265" x2="142" y2="265" stroke-width="1.6" marker-end="url(#ah)" style="stroke:var(--muted)"/>
+  <text x="236" y="257" text-anchor="middle" font-size="9.5" style="fill:var(--muted)">upsert LWW · anti-eco · invalida Redis</text>
+  <rect x="20" y="236" width="120" height="58" rx="8" style="fill:var(--surface);stroke:var(--line)"/>
+  <text x="80" y="260" text-anchor="middle" font-size="12.5" font-weight="600" style="fill:var(--fg)">PostgreSQL A</text>
+  <text x="80" y="278" text-anchor="middle" font-size="10.5" font-family="IBM Plex Mono, Menlo, monospace" style="fill:var(--muted)">origin_region = b</text>
+
+  <text x="20" y="352" font-size="10.5" style="fill:var(--muted)">Eco: la fila que escribe el Replicator B también la captura Debezium B y la publica en cdc.b.public.tickets con origin_region = a;</text>
+  <text x="20" y="367" font-size="10.5" style="fill:var(--muted)">el Replicator A la lee y la descarta (contador "eco"). Lo mismo en sentido contrario. Nada se replica dos veces.</text>
+  <text x="20" y="388" font-size="10.5" style="fill:var(--muted)">Dentro de la VM todo habla por la red de Docker (kafka:19092, connect:8083). Hacia afuera sólo se publica 9092 en la IP privada.</text>
+</svg>
+</div>
+
+<h3>Broker (<code>vm/docker-compose.yml</code>, servicio <code>kafka</code>)</h3>
+<div class="tbl"><table>
+  <thead><tr><th>Parámetro</th><th>Valor</th><th>Por qué</th></tr></thead>
+  <tbody>
+    <tr><td>Imagen</td><td><code>apache/kafka:3.9.1</code></td><td>Imagen oficial con manifest arm64 (la VM es <code>Standard_B2ps_v2</code>, Arm64)</td></tr>
+    <tr><td>Modo</td><td>KRaft, <code>KAFKA_PROCESS_ROLES=broker,controller</code>, nodo 1, quorum <code>1@kafka:9093</code></td><td>Sin ZooKeeper; un solo proceso por región</td></tr>
+    <tr><td>Cluster id</td><td><code>KAFKA_CLUSTER_ID</code> distinto por región</td><td>Dos clústeres independientes, no uno estirado</td></tr>
+    <tr><td>Listener INTERNAL</td><td><code>kafka:19092</code> (sólo red de Docker)</td><td>Lo usan la API (<code>/status</code>), Kafka Connect y los comandos de administración</td></tr>
+    <tr><td>Listener EXTERNAL</td><td><code>&lt;IP privada&gt;:9092</code>, publicado como <code>${PRIVATE_IP}:9092:9092</code></td><td>Lo consume el Replicator de la otra región por el peering; nunca por la IP pública</td></tr>
+    <tr><td>Listener CONTROLLER</td><td><code>9093</code></td><td>Quorum KRaft interno</td></tr>
+    <tr><td>Seguridad</td><td>PLAINTEXT en los tres listeners</td><td>La protección es de red: IP privada, NSG (<code>AllowKafka-PeerVnet</code>, 9092 sólo desde 10.x.0.0/16 de la VNet par) y peering. En producción: TLS + SASL + ACLs</td></tr>
+    <tr><td>Particiones / réplicas</td><td>1 partición, factor de réplica 1 (también para <code>__consumer_offsets</code>)</td><td>Un nodo; el orden total del topic es justamente lo que el Replicator necesita</td></tr>
+    <tr><td>Retención</td><td>168 h en el broker y <code>retention.ms=604800000</code> en el topic</td><td>7 días de cola máxima si la otra región está caída</td></tr>
+    <tr><td>Topics automáticos</td><td><code>KAFKA_AUTO_CREATE_TOPICS_ENABLE=true</code>; <code>configure.sh</code> crea <code>cdc.&lt;r&gt;.public.tickets</code> explícitamente</td><td>Los topics internos de Connect y los de heartbeat se crean solos</td></tr>
+    <tr><td>Datos</td><td><code>/opt/aa/data/kafka</code> en el disco de la VM</td><td>La cola sobrevive a reinicios y a la desasignación nocturna</td></tr>
+    <tr><td>Memoria</td><td><code>-Xms384m -Xmx512m</code></td><td>Cabe junto a Connect (768 MB), API, Redis y Caddy en 8 GiB</td></tr>
+  </tbody>
+</table></div>
+
+<h3>Kafka Connect (servicio <code>connect</code>)</h3>
+<div class="tbl"><table>
+  <thead><tr><th>Parámetro</th><th>Valor</th><th>Por qué</th></tr></thead>
+  <tbody>
+    <tr><td>Imagen</td><td><code>quay.io/debezium/connect:3.1</code> (Debezium 3.1.3.Final sobre Kafka 3.9.0)</td><td>Trae el conector de PostgreSQL listo</td></tr>
+    <tr><td>Worker</td><td><code>GROUP_ID=connect-&lt;r&gt;</code>, un solo worker, <code>BOOTSTRAP_SERVERS=kafka:19092</code></td><td>Modo distribuido con un nodo: la configuración vive en Kafka, no en archivos</td></tr>
+    <tr><td>Topics internos</td><td><code>_connect_configs</code>, <code>_connect_offsets</code>, <code>_connect_status</code></td><td>En <code>_connect_offsets</code> va el LSN hasta el que Debezium ya publicó</td></tr>
+    <tr><td>Formato</td><td>JSON sin esquema (<code>schemas.enable=false</code>) en clave y valor</td><td>Eventos legibles a simple vista; el Replicator los parsea con <code>json.loads</code></td></tr>
+    <tr><td>REST</td><td><code>127.0.0.1:8083</code> de la VM</td><td>Sólo desde dentro de la VM (o desde la API por <code>connect:8083</code>)</td></tr>
+  </tbody>
+</table></div>
+
+<h3>Conector Debezium <code>pg-source-&lt;r&gt;</code> (<code>vm/connect/connector.json.tpl</code>)</h3>
+<div class="tbl"><table>
+  <thead><tr><th>Parámetro</th><th>Valor</th><th>Por qué</th></tr></thead>
+  <tbody>
+    <tr><td>Clase / plugin</td><td><code>PostgresConnector</code>, <code>plugin.name=pgoutput</code></td><td>Decodificación lógica nativa de PostgreSQL; no requiere extensiones en Flexible Server</td></tr>
+    <tr><td>Slot y publicación</td><td><code>slot.name=dbz_&lt;r&gt;</code>, <code>publication.name=dbz_pub</code>, <code>publication.autocreate.mode=disabled</code></td><td>La publicación la crea <code>db/schema.sql</code>; el slot es lo que retiene WAL si Debezium no lee</td></tr>
+    <tr><td>Tablas</td><td><code>public.tickets</code>, <code>public.dbz_heartbeat</code></td><td>Sólo lo que se replica; la tabla tiene <code>REPLICA IDENTITY FULL</code> para que updates y borrados lleven la fila completa</td></tr>
+    <tr><td>Nombre de topic</td><td><code>topic.prefix=cdc.&lt;r&gt;</code> → <code>cdc.&lt;r&gt;.public.tickets</code></td><td>Un espacio de nombres por región; el Replicator del par se suscribe por nombre</td></tr>
+    <tr><td>Snapshot</td><td><code>snapshot.mode=initial</code></td><td>La primera vez publica las filas existentes (op <code>r</code>), luego sólo cambios</td></tr>
+    <tr><td>Heartbeat</td><td>cada 10 s, con <code>heartbeat.action.query</code> (upsert en <code>dbz_heartbeat</code>)</td><td>Hace avanzar el slot aunque nadie escriba: evita WAL retenido en Postgres</td></tr>
+    <tr><td>Borrados</td><td><code>tombstones.on.delete=false</code></td><td>La app usa borrado lógico (<code>deleted_at</code>), que viaja como un UPDATE normal</td></tr>
+    <tr><td>Topics nuevos</td><td>1 partición, réplica 1, retención 7 días</td><td>Mismo criterio que el broker</td></tr>
+  </tbody>
+</table></div>
+
+<h2 id="elementos">3 · Las piezas que logran el activo-activo</h2>
+<p>Kafka solo transporta. El activo-activo lo consiguen estas decisiones, cada una visible en el código:</p>
+<div class="grid">
+  <div class="el"><h3>1 · Captura de cambios (CDC) con Debezium</h3><p>Cada INSERT y UPDATE confirmado en Postgres sale del WAL como un evento JSON con la fila antes y después. La aplicación no sabe que se replica.</p><div class="where">vm/connect/connector.json.tpl · db/schema.sql</div></div>
+  <div class="el"><h3>2 · Un log por región, en disco</h3><p>El topic <code>cdc.&lt;r&gt;.public.tickets</code> vive en la VM de la región que escribe. Si la otra región está caída, los eventos esperan hasta 7 días.</p><div class="where">vm/docker-compose.yml · vm/configure.sh</div></div>
+  <div class="el"><h3>3 · Replicación pull cruzada</h3><p>El Replicator de B consume el Kafka de A (no al revés). Los offsets del grupo <code>replicator-b</code> quedan en Kafka A, así que al volver B reanuda justo donde iba.</p><div class="where">services/replicator/replicator.py · PEER_KAFKA</div></div>
+  <div class="el"><h3>4 · Anti-eco por <code>origin_region</code></h3><p>Cada fila lleva la región que hizo la última escritura. Si un evento trae mi propia región, es mi cambio dando la vuelta y se descarta (contador <code>echo</code>).</p><div class="where">replicator.py · apply()</div></div>
+  <div class="el"><h3>5 · Última escritura gana (LWW)</h3><p>El upsert sólo aplica si <code>updated_at</code> (reloj del servidor Postgres) es más nuevo; en empate gana la región alfabéticamente menor. Lo descartado cuenta como <code>skipped_older</code>.</p><div class="where">replicator.py · UPSERT … WHERE EXCLUDED.updated_at &gt; tickets.updated_at</div></div>
+  <div class="el"><h3>6 · Idempotencia de extremo a extremo</h3><p>El uuid lo genera el cliente, el PUT es idempotente y el offset se confirma <b>después</b> de aplicar: entrega al menos una vez + upsert idempotente = efectivamente una vez.</p><div class="where">app.py · upsert_ticket · replicator.py · consumer.commit</div></div>
+  <div class="el"><h3>7 · Borrado lógico</h3><p><code>deleted_at</code> viaja como UPDATE y entra al LWW igual que cualquier cambio; un borrado y una edición concurrentes se resuelven por reloj.</p><div class="where">app.py · delete_ticket</div></div>
+  <div class="el"><h3>8 · Latido de Debezium</h3><p>Sin tráfico, el slot de replicación retendría WAL sin límite (<code>max_slot_wal_keep_size</code> no es configurable en Flexible Server). El heartbeat cada 10 s lo mantiene al día.</p><div class="where">connector.json.tpl · heartbeat.action.query</div></div>
+  <div class="el"><h3>9 · Caché y UI al día</h3><p>Al aplicar un cambio remoto, el Replicator borra la lista cacheada en Redis y publica un evento que la API reenvía por SSE al navegador.</p><div class="where">replicator.py · Stats.notify · app.py · /events</div></div>
+  <div class="el"><h3>10 · Telemetría de la cola</h3><p><code>/status</code> calcula <code>outbound_pending</code> = fin del topic − offset confirmado por el grupo del par, y expone el estado del conector y los contadores del Replicator.</p><div class="where">app.py · check_kafka · repl_stats</div></div>
+  <div class="el"><h3>11 · Red mínima</h3><p>Peering global entre VNets y una sola regla de entrada para 9092 desde la VNet par. Nada de Kafka sale a Internet.</p><div class="where">infra/modules/peering.bicep · scripts/fix-subnet-nsg.sh</div></div>
+</div>
+<div class="callout warn">Ventana RPO: lo que A escribió justo antes de caer y B no alcanzó a consumir llega cuando A vuelve (está en el disco de A). Y si una región estuviera caída más de 7 días, la retención borraría eventos no consumidos: en producción conviene subir la retención, usar compactación por clave (<code>id</code>) o ambas.</div>
+
+<h2 id="evento">4 · Un evento real, de punta a punta</h2>
+<p>Trazado de una solicitud creada en A el 2026-11-04 (horas en UTC; en CDMX son 6 h menos). Los tiempos salen de los propios eventos y de los contadores del Replicator.</p>
+<ul class="timeline">
+  <li><span class="t">18:36:07.709</span><span>La API de A inserta la fila (<code>updated_at</code>, folio <code>A-261104-94D2</code>, <code>origin_region = a</code>)</span></li>
+  <li><span class="t">18:36:07.717</span><span>Debezium A ve el commit en el WAL (<code>source.ts_ms</code>)</span></li>
+  <li><span class="t">18:36:07.894</span><span>Debezium A construye el evento (<code>ts_ms</code>, op <code>c</code>)</span></li>
+  <li><span class="t">18:36:08.164</span><span>Kafka A lo guarda en <code>cdc.a.public.tickets</code>, offset 20 (<code>CreateTime</code>)</span></li>
+  <li><span class="t b">18:36:08.186</span><span>El Replicator B lo lee por el peering y confirma el upsert en Postgres B (<code>source.ts_ms</code> del eco)</span></li>
+  <li><span class="t b">18:36:08.190</span><span>Replicator B registra <code>applied</code> con <code>last_lag_ms = 295</code> (medido contra <code>ts_ms</code>)</span></li>
+  <li><span class="t b">18:36:09.193</span><span>Debezium B publica la fila replicada en <code>cdc.b.public.tickets</code>, offset 20, con <code>origin_region = a</code>: el Replicator A la descarta (<code>echo</code>)</span></li>
+</ul>
+<h3>El evento tal como está en Kafka A</h3>
+<p>Formato Debezium ("envelope"): <code>before</code> y <code>after</code> son la fila, <code>source</code> dice de dónde salió, <code>op</code> es <code>c</code> crear, <code>u</code> actualizar, <code>d</code> borrar o <code>r</code> snapshot. La clave del mensaje es <code>{"id": …}</code>, así que todos los cambios de una misma fila caen en la misma partición y en orden.</p>
+<pre class="out"><code>CreateTime:1793817368164  {"id":"7c00e32d-3a51-4a2f-95d9-f3505bfef5d7"}
+{
+  "before": null,
+  "after": {
+    "id": "7c00e32d-3a51-4a2f-95d9-f3505bfef5d7", "folio": "A-261104-94D2",
+    "titulo": "Prueba de replicación (guía Kafka)", "estado": "abierto", "prioridad": "baja",
+    "origin_region": "a",
+    "created_at": "2026-11-04T18:36:07.709234Z", "updated_at": "2026-11-04T18:36:07.709234Z",
+    "version": 1, "deleted_at": null
+  },
+  "source": {
+    "version": "3.1.3.Final", "connector": "postgresql", "name": "cdc.a", "ts_ms": 1793817367717,
+    "snapshot": "false", "db": "appdb", "schema": "public", "table": "tickets",
+    "txId": 20826, "lsn": 5771363440
+  },
+  "op": "c",
+  "ts_ms": 1793817367894
+}</code></pre>
+<p>El borrado lógico de esa misma fila quedó en el offset 21 como op <code>u</code>: <code>before.deleted_at = null</code>, <code>after.deleted_at = "2026-11-04T18:40:47.449163Z"</code>, <code>version 2</code>. En B el contador del Replicator A cerró en <code>echo = 2</code>: los dos cambios dieron la vuelta y fueron descartados.</p>
+
+<h2 id="comandos">5 · Guía de comandos para ver las colas</h2>
+<p>De menos a más detalle. Todo corre desde la raíz del repo con la suscripción activa (<code>az account set -s "&lt;suscripción&gt;"</code>) y el ambiente encendido (<code>./scripts/start.sh</code>).</p>
+
+<h3>5.1 · Desde tu Mac, sin entrar a la VM</h3>
+<pre><code># Resumen de ambas regiones: fin del topic y "pendientes para el par" (= LAG), conector y Replicator
+./scripts/status.sh
+
+# La telemetría completa de una región (la misma que lee el Panel de resiliencia del SPA)
+curl -s https://aa-xxxxxx-a.centralus.cloudapp.azure.com/status | jq '{kafka, replicator, connect}'
+curl -s https://aa-xxxxxx-b.canadacentral.cloudapp.azure.com/status | jq '{kafka, replicator, connect}'
+
+# Las dos bases son idénticas (conteo + hash de todas las filas)
+./scripts/verify-sync.sh</code></pre>
+<pre class="out"><code>[A] Región A · Central US · uptime 84s
+   Kafka:    OK · topic cdc.a.public.tickets fin=20 · pendientes para el par=0
+   Debezium: RUNNING
+   Replicator: vivo · aplicados=0 eco=0 viejos=0 errores=0 lag=- ms · kafka par conectado=1
+   Kafka del par alcanzable: true</code></pre>
+<dl class="kv">
+  <dt>kafka.topic_end</dt><dd>Siguiente offset a escribir en mi topic (fin del log).</dd>
+  <dt>kafka.peer_group_committed</dt><dd>Último offset confirmado por el grupo del par (<code>replicator-b</code> en A). <code>null</code> si nunca ha consumido.</dd>
+  <dt>kafka.outbound_pending</dt><dd>Eventos míos que el par aún no aplicó: la cola saliente.</dd>
+  <dt>replicator.applied / echo / skipped_older / errors</dt><dd>Aplicados, descartados por eco, descartados por LWW y errores (el contador persiste en Redis hasta reiniciar la VM).</dd>
+  <dt>replicator.last_lag_ms</dt><dd>Edad del último evento aplicado, medida contra el <code>ts_ms</code> de Debezium.</dd>
+  <dt>replicator.peer_connected</dt><dd>1 si el Replicator alcanza el Kafka del par ahora mismo.</dd>
+  <dt>postgres.slots[0].retained_bytes</dt><dd>WAL que el slot retiene; alto tras días con Debezium parado, baja a KiB al reanudar.</dd>
+</dl>
+
+<h3>5.2 · Una sola orden: <code>scripts/kafka-queues.sh</code></h3>
+<p>Nuevo en el repo. Entra a la VM por <code>run-command</code> (sin SSH) y muestra topics, marcas de agua, lag del grupo del par, estado del conector, contadores del Replicator y, si pides N, los últimos N eventos. Tarda entre 30 y 60 s y su salida se corta a 4 KB (límite de Azure).</p>
+<pre><code>./scripts/kafka-queues.sh A        # región A
+./scripts/kafka-queues.sh B 3      # región B y los últimos 3 eventos de su topic</code></pre>
+<pre class="out"><code>▸ [A] Kafka A · topic cdc.a.public.tickets · lo consume replicator-b desde la región B
+## topics
+__consumer_offsets
+__debezium-heartbeat.cdc.a
+_connect_configs
+_connect_offsets
+_connect_status
+cdc.a.public.dbz_heartbeat
+cdc.a.public.tickets
+## marcas de agua de cdc.a.public.tickets (inicio = evento más viejo disponible · fin = siguiente offset a escribir)
+   inicio=20 fin=22 (eventos retenidos: 2)
+## grupo replicator-b (LAG = eventos que B aún no ha aplicado)
+GROUP          TOPIC                 PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG  CONSUMER-ID                 HOST
+replicator-b   cdc.a.public.tickets  0          22              22              0    replicator-b-bbb4fa5d-…     /10.20.1.10
+## conector Debezium pg-source-a
+{"name":"pg-source-a","connector":{"state":"RUNNING",…},"tasks":[{"id":0,"state":"RUNNING",…}],"type":"source"}
+## replicator-a (contadores en Redis repl:stats)
+peer_connected 1 · echo 2</code></pre>
+<div class="callout">Fíjate en las marcas de agua: hoy el inicio era 20 y el fin 20 antes de la prueba. Los 20 eventos de octubre ya no existen: la retención de 7 días los borró. Es normal y no afecta la replicación porque el grupo ya los había consumido.</div>
+
+<h3>5.3 · Comandos sueltos dentro de la VM</h3>
+<p>Se envían con <code>run_on_vm</code> de <code>scripts/lib.sh</code> (es bash; desde zsh envuélvelo en <code>bash -c</code>). Dentro de la VM, Kafka corre en un contenedor y sus herramientas están en <code>/opt/kafka/bin</code>; el broker local responde en <code>localhost:19092</code>.</p>
+<pre><code># Patrón general (sustituye el comando entre comillas)
+bash -c '. scripts/lib.sh; run_on_vm A "cd /opt/aa &amp;&amp; docker compose exec -T kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:19092 --list"'</code></pre>
+<p>Los siguientes se escriben ya dentro de la VM (en <code>/opt/aa</code>), con <code>K=&quot;docker compose exec -T kafka /opt/kafka/bin&quot;</code> y <code>B=&quot;--bootstrap-server localhost:19092&quot;</code> para abreviar:</p>
+<pre><code># Topics: lista y detalle (particiones, réplicas, retención)
+$K/kafka-topics.sh $B --list
+$K/kafka-topics.sh $B --describe --topic cdc.a.public.tickets
+
+# Marcas de agua: -2 = inicio (evento más viejo que queda), -1 = fin (siguiente offset)
+$K/kafka-get-offsets.sh $B --topic cdc.a.public.tickets --time -2
+$K/kafka-get-offsets.sh $B --topic cdc.a.public.tickets --time -1
+
+# Grupos de consumidores: el LAG del grupo del par es la cola pendiente hacia esa región
+$K/kafka-consumer-groups.sh $B --list
+$K/kafka-consumer-groups.sh $B --describe --group replicator-b
+
+# Leer eventos: SIEMPRE con --max-messages y --timeout-ms (si no, el comando no termina y run-command corta a 4 KB)
+# el evento del offset 20
+$K/kafka-console-consumer.sh $B --topic cdc.a.public.tickets --partition 0 --offset 20 --max-messages 1 --timeout-ms 20000 --property print.timestamp=true --property print.key=true
+# los 5 más viejos que queden
+$K/kafka-console-consumer.sh $B --topic cdc.a.public.tickets --from-beginning --max-messages 5 --timeout-ms 20000
+# los últimos N: fin − N como --offset (si queda por debajo del inicio, usa el inicio)
+# el último latido de Debezium (sólo ts_ms)
+$K/kafka-console-consumer.sh $B --topic __debezium-heartbeat.cdc.a --partition 0 --offset -1 --max-messages 1 --timeout-ms 20000</code></pre>
+<pre><code># Kafka Connect (REST en 127.0.0.1:8083 de la VM)
+curl -s localhost:8083/connectors?expand=status | jq
+curl -s localhost:8083/connectors/pg-source-a/status | jq
+curl -s localhost:8083/connectors/pg-source-a/config | jq 'del(.["database.password"])'
+curl -s -X POST "localhost:8083/connectors/pg-source-a/restart?includeTasks=true"   # si una tarea queda FAILED
+curl -s -X PUT  localhost:8083/connectors/pg-source-a/pause                         # y /resume
+
+# Replicator: contadores en Redis y bitácora
+docker compose exec -T redis redis-cli hgetall repl:stats
+docker compose logs --tail 20 --no-log-prefix replicator
+docker compose logs --tail 20 --no-log-prefix connect | grep -iE 'error|warn'
+docker compose logs --tail 20 --no-log-prefix kafka
+
+# El slot de Postgres desde la VM (WAL retenido en bytes)
+set -a; . ./.env; set +a; PGPASSWORD=$PG_PASSWORD psql -h $PG_HOST -U $PG_USER -d $PG_DB -At \
+  -c "SELECT slot_name, active, pg_wal_lsn_diff(pg_current_wal_lsn(), confirmed_flush_lsn) FROM pg_replication_slots;"</code></pre>
+<div class="callout warn">Lo que no conviene hacer en la demo: <code>--delete</code> de topics o <code>--reset-offsets</code> del grupo <code>replicator-*</code>. Borrar el topic o retroceder el offset hace que el Replicator vuelva a aplicar eventos (inofensivo por el LWW, pero confuso), y adelantarlo pierde cambios. Tampoco borres el slot <code>dbz_&lt;r&gt;</code> en Postgres: Debezium tendría que hacer un snapshot nuevo.</div>
+
+<h2 id="gui">6 · La interfaz gráfica: Kafbat UI</h2>
+<p><b>Sí, desde el 2026-11-04.</b> Cada región publica <b>Kafbat UI</b> (continuación de Provectus kafka-ui; versión 1.5.0, imagen <code>ghcr.io/kafbat/kafka-ui</code> con manifest arm64) en <code>https://&lt;región&gt;/kafka-ui/</code>, detrás de Caddy, con usuario y contraseña. Corre en la misma VM (costo 0, heap limitado a 400 MB) y en <b>modo solo lectura</b>: se ven brokers, topics, mensajes, grupos y conectores, pero no se pueden borrar topics, producir mensajes ni mover offsets (justo lo que la sección 5 pide no hacer en la demo). Hacia Internet siguen abiertos sólo 443 y 80, y 9092 sólo hacia la VNet par. El Panel de resiliencia del SPA y <code>scripts/status.sh</code> siguen siendo la vista rápida.</p>
+<div class="tbl"><table>
+  <thead><tr><th>Región</th><th>URL</th><th>Usuario</th><th>Contraseña</th></tr></thead>
+  <tbody>
+    <tr><td>A · Central US</td><td><code>https://aa-xxxxxx-a.centralus.cloudapp.azure.com/kafka-ui/</code></td><td><code>demo</code></td><td rowspan="2"><code>cat .secrets/kafka_ui_password</code><br>(la genera <code>push-bundle.sh</code>; ignorada por git)</td></tr>
+    <tr><td>B · Canada Central</td><td><code>https://aa-xxxxxx-b.canadacentral.cloudapp.azure.com/kafka-ui/</code></td><td><code>demo</code></td></tr>
+  </tbody>
+</table></div>
+<h3>Qué enseñar en la demo (región A)</h3>
+<ol class="steps">
+  <li><b>Brokers</b>: el único nodo KRaft de la región (id 1), con sus particiones y el tamaño de sus segmentos.</li>
+  <li><b>Topics → <code>cdc.a.public.tickets</code> → Messages</b>: cada evento Debezium con su JSON (<code>before</code>, <code>after</code>, <code>op</code>, <code>ts_ms</code>); en Overview, las marcas de agua y la retención de 7 días.</li>
+  <li><b>Consumers → <code>replicator-b</code></b>: el offset confirmado por B y el lag, que es la cola hacia B. Con B caída (sección 7) el lag sube y el grupo aparece sin miembros; al volver B, baja a 0.</li>
+  <li><b>Kafka Connect → <code>connect-a</code> → <code>pg-source-a</code></b>: el conector Debezium en <code>RUNNING</code>, su tarea y su configuración (slot <code>dbz_a</code>, publicación <code>dbz_pub</code>).</li>
+</ol>
+<p>En B es lo mismo con <code>cdc.b.public.tickets</code>, <code>replicator-a</code> y <code>pg-source-b</code>.</p>
+<h3>Cómo está hecho</h3>
+<p>Un servicio más en <code>vm/docker-compose.yml</code> y una ruta en <code>vm/caddy/Caddyfile</code> con <code>basic_auth</code>, colocada antes del <code>handle</code> que hace proxy a la API. El usuario (<code>KAFKA_UI_USER</code>) y el modo solo lectura (<code>KAFKA_UI_READONLY</code>) se fijan en <code>deploy.env</code>. La contraseña la crea <code>scripts/push-bundle.sh</code> (función <code>ensure_kafka_ui_secret</code> de <code>scripts/lib.sh</code>) en <code>.secrets/kafka_ui_password</code>, calcula su hash bcrypt (<code>caddy hash-password</code> en Docker o, si no hay Docker local, <code>htpasswd -B</code>) y lo envía en el <code>.env</code> de la VM como <code>KAFKA_UI_HASH</code>; Caddy lo lee con el placeholder <code>{$KAFKA_UI_HASH}</code>. Ningún secreto queda en git.</p>
+<pre><code>  # vm/docker-compose.yml
+  kafka-ui:
+    image: ghcr.io/kafbat/kafka-ui:v1.5.0
+    restart: always
+    depends_on: [kafka, connect]
+    environment:
+      KAFKA_CLUSTERS_0_NAME: region-${REGION}
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:19092
+      KAFKA_CLUSTERS_0_KAFKACONNECT_0_NAME: connect-${REGION}
+      KAFKA_CLUSTERS_0_KAFKACONNECT_0_ADDRESS: http://connect:8083
+      KAFKA_CLUSTERS_0_READONLY: ${KAFKA_UI_READONLY:-true}
+      SERVER_SERVLET_CONTEXT_PATH: /kafka-ui
+      DYNAMIC_CONFIG_ENABLED: "false"
+      JAVA_OPTS: "-Xms128m -Xmx400m"</code></pre>
+<pre><code>	# vm/caddy/Caddyfile, antes del handle de la API
+	redir /kafka-ui /kafka-ui/ 301
+	handle /kafka-ui/* {
+		basic_auth {
+			{$KAFKA_UI_USER} {$KAFKA_UI_HASH}
+		}
+		reverse_proxy kafka-ui:8080
+	}</code></pre>
+<dl class="kv">
+  <dt>cambiar la contraseña</dt><dd>Borra (o edita) <code>.secrets/kafka_ui_password</code> y reenvía el bundle: <code>./scripts/push-bundle.sh A</code> y <code>B</code>. Recalcula el hash y recrea Caddy, sin tocar Kafka.</dd>
+  <dt>permitir escritura</dt><dd><code>KAFKA_UI_READONLY=false</code> en <code>deploy.env</code> y reenviar el bundle. Sólo si de verdad quieres reiniciar conectores o producir mensajes desde la consola.</dd>
+  <dt>apagarla</dt><dd>Quita el servicio <code>kafka-ui</code> del compose y el bloque de Caddy, y reenvía el bundle (<code>--remove-orphans</code> retira el contenedor).</dd>
+  <dt>memoria</dt><dd>Medido el 2026-11-04 en la VM A tras arrancarla: <span class="num">333 MiB</span> residentes para <code>kafka-ui</code> (JVM con heap máximo de 400 MB), frente a <span class="num">671 MiB</span> de Kafka y <span class="num">509 MiB</span> de Connect; la VM de 8 GiB quedó con <span class="num">5,6 GiB</span> disponibles.</dd>
+</dl>
+<div class="callout warn">Una consola de Kafka deja leer todos los mensajes del topic (los datos de las solicitudes). Por eso va sólo por HTTPS, con contraseña generada y en modo solo lectura. No pongas la contraseña en el guion ni en capturas de pantalla.</div>
+<h3>Alternativas consideradas</h3>
+<p>Otras consolas que también corren en arm64, por si Kafbat UI no conviene:</p>
+<div class="tbl"><table>
+  <thead><tr><th>Herramienta</th><th>Imagen</th><th>Qué muestra</th><th>Notas</th></tr></thead>
+  <tbody>
+    <tr><td><b>AKHQ</b></td><td><code>tchiotludo/akhq</code> (amd64, arm64)</td><td>Topics, mensajes, grupos, Connect, esquemas</td><td>Configuración por archivo YAML; también JVM</td></tr>
+    <tr><td><b>Redpanda Console</b></td><td><code>docker.redpanda.com/redpandadata/console</code></td><td>Topics, mensajes, grupos, Connect</td><td>Go, ligera; comprobar manifest arm64 antes de usarla</td></tr>
+  </tbody>
+</table></div>
+
+<h2 id="caos">7 · Ver crecer una cola (escenarios de caos)</h2>
+<p>La cola es invisible cuando todo va bien (LAG 0). Para enseñarla, tira una región y escribe en la otra:</p>
+<ol class="steps">
+  <li><code>./scripts/chaos.sh stop-vm B</code> (unos 35 s). El SPA conmuta a A sin que el usuario lo note.</li>
+  <li>Crea solicitudes en A: <code>./scripts/seed.sh A 3</code> o desde el SPA.</li>
+  <li>Mira la cola: <code>./scripts/status.sh</code> muestra en A "pendientes para el par=3"; <code>./scripts/kafka-queues.sh A</code> muestra el grupo <code>replicator-b</code> con <code>LAG 3</code> y sin CONSUMER-ID (B no está conectado).</li>
+  <li><code>./scripts/chaos.sh start-vm B</code> (unos 75 s). El Replicator B reanuda desde su offset en Kafka A y drena la cola; <code>applied</code> sube a 3 y el LAG vuelve a 0.</li>
+  <li><code>./scripts/verify-sync.sh</code>: las dos bases son idénticas.</li>
+</ol>
+<p>Variantes: <code>chaos.sh partition</code> corta el 9092 entre VNets (cada región sigue escribiendo y las dos colas crecen; <code>chaos.sh heal</code> las drena y el LWW resuelve los conflictos); <code>chaos.sh stop-db B</code> tira sólo Postgres B (el Replicator B reintenta la conexión cada 5 s y no confirma offsets hasta aplicar: nada se pierde).</p>
+
+<h2 id="glosario">8 · Glosario</h2>
+<dl class="kv">
+  <dt>topic</dt><dd>Registro ordenado y sólo de escritura donde se guardan eventos; aquí uno de datos por región.</dd>
+  <dt>partición</dt><dd>Fragmento de un topic con orden garantizado. Con una sola partición, el orden es total.</dd>
+  <dt>offset</dt><dd>Número consecutivo de cada evento en una partición. Empieza en 0 y nunca se reutiliza.</dd>
+  <dt>marcas de agua</dt><dd>Inicio (offset más viejo disponible tras la retención) y fin (siguiente offset a escribir).</dd>
+  <dt>grupo de consumidores</dt><dd>Nombre bajo el que un consumidor confirma su progreso (<code>replicator-a</code>, <code>replicator-b</code>).</dd>
+  <dt>lag</dt><dd>Fin del log menos offset confirmado del grupo: eventos aún no procesados. La "cola".</dd>
+  <dt>retención</dt><dd>Tiempo que Kafka conserva un evento aunque ya se haya leído (7 días aquí).</dd>
+  <dt>KRaft</dt><dd>Modo de Kafka sin ZooKeeper; el propio broker guarda los metadatos.</dd>
+  <dt>CDC</dt><dd>Change Data Capture: convertir los cambios de una base en eventos, aquí leyendo el WAL de PostgreSQL.</dd>
+  <dt>slot de replicación</dt><dd>Marcador en Postgres que retiene WAL hasta que el consumidor (Debezium) confirma haberlo leído.</dd>
+  <dt>publicación</dt><dd>Conjunto de tablas que Postgres expone por decodificación lógica (<code>dbz_pub</code>).</dd>
+  <dt>envelope</dt><dd>Formato del evento Debezium: <code>before</code>, <code>after</code>, <code>source</code>, <code>op</code>, <code>ts_ms</code>.</dd>
+  <dt>eco</dt><dd>Mi propio cambio que vuelve por el topic de la otra región; se reconoce por <code>origin_region</code> y se descarta.</dd>
+  <dt>LWW</dt><dd>Last Writer Wins: ante dos versiones de la misma fila gana la de <code>updated_at</code> más reciente.</dd>
+</dl>
+
+<footer>
+  Fuentes: <code>vm/docker-compose.yml</code>, <code>vm/caddy/Caddyfile</code>, <code>vm/connect/connector.json.tpl</code>, <code>vm/configure.sh</code>, <code>services/replicator/replicator.py</code>, <code>services/api/app.py</code>, <code>scripts/kafka-queues.sh</code>, <code>docs/architecture.md</code>. Datos medidos el 2026-11-04 entre 18:26 y 18:44 UTC en el despliegue de referencia. Guion de la demo: <code>docs/guion-demo.html</code>.
+</footer>
+</main>
+<script>
+document.querySelectorAll('pre').forEach(function (pre) {
+  var b = document.createElement('button'); b.type = 'button'; b.className = 'copy'; b.textContent = 'Copiar';
+  b.addEventListener('click', function () {
+    var code = pre.querySelector('code'); var t = code ? code.innerText : pre.innerText;
+    var done = function (msg) { b.textContent = msg; setTimeout(function () { b.textContent = 'Copiar'; }, 1800); };
+    var fallback = function () {
+      try { var r = document.createRange(); r.selectNodeContents(code || pre); var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); done('Selecciona y copia'); } catch (e) { done('No se pudo'); }
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(t).then(function () { done('Copiado'); }, fallback); } else { fallback(); }
+  });
+  pre.appendChild(b);
+});
+</script>
+</body>
+</html>

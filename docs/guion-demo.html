@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Guion Demo Activo-Activo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: una sola columna de lectura (72ch) con una banda de resumen arriba; las escenas son tarjetas numeradas porque el orden es real. */
+:root {
+  --bg: #f4f6fb; --surface: #ffffff; --surface-2: #eaeff8; --fg: #14213d; --muted: #5b6b8c; --line: #d6dcea;
+  --accent: #1f6feb; --accent-soft: #e3edff; --ok: #15803d; --warn: #b45309; --crit: #b91c1c; --purple: #6d28d9;
+  --display: "Manrope", "Segoe UI", Helvetica, Arial, sans-serif;
+  --body: "IBM Plex Sans", "Segoe UI", Helvetica, Arial, sans-serif;
+  --mono: "IBM Plex Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0b1626; --surface: #122c4d; --surface-2: #16233c; --fg: #e6edf7; --muted: #9fb0c9; --line: #2c5f9e;
+    --accent: #4da3ff; --accent-soft: #163a66; --ok: #4ade80; --warn: #fbbf24; --crit: #f87171; --purple: #c084fc;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0b1626; --surface: #122c4d; --surface-2: #16233c; --fg: #e6edf7; --muted: #9fb0c9; --line: #2c5f9e;
+  --accent: #4da3ff; --accent-soft: #163a66; --ok: #4ade80; --warn: #fbbf24; --crit: #f87171; --purple: #c084fc;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--fg); font: 16px/1.55 var(--body); padding-block: 0 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+main { max-width: 76ch; margin: 0 auto; }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(1.7rem, 4vw, 2.4rem); font-weight: 800; line-height: 1.15; }
+h2 { font-size: 1.35rem; font-weight: 800; margin-top: 2.4rem; margin-bottom: .6rem; }
+h3 { font-size: 1.05rem; font-weight: 600; }
+p { margin: .5rem 0; }
+.eyebrow { font-family: var(--body); font-size: .74rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.hero { padding-block: 28px 18px; border-bottom: 1px solid var(--line); }
+.hero p.lead { color: var(--muted); max-width: 62ch; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.chip { font-size: .8rem; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--muted); }
+.chip b { color: var(--fg); font-weight: 600; }
+.timeline { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin-top: 14px; }
+.timeline a { display: block; text-decoration: none; color: inherit; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; min-width: 0; }
+.timeline a:hover, .timeline a:focus-visible { border-color: var(--accent); outline: none; }
+.timeline .t { font-family: var(--mono); font-size: .75rem; color: var(--accent); }
+.timeline .n { font-weight: 600; font-size: .92rem; }
+.scene { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; margin-top: 16px; }
+.scene header { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.scene .dur { font-family: var(--mono); font-size: .8rem; color: var(--muted); }
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 12px; }
+@media (max-width: 640px) { .cols { grid-template-columns: 1fr; } }
+.cols > div { min-width: 0; }
+.box { background: var(--surface-2); border-radius: 10px; padding: 12px 14px; font-size: .95rem; }
+.box h3 { font-size: .8rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+.box ul, .box ol { margin: 0; padding-left: 1.2rem; }
+.box li + li { margin-top: 4px; }
+.say { border-left: 3px solid var(--purple); }
+.see { border-left: 3px solid var(--ok); }
+pre { position: relative; margin: 10px 0 0; background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 86px 12px 14px; overflow-x: auto; font: .86rem/1.5 var(--mono); }
+pre code { white-space: pre; }
+pre .copy { position: absolute; top: 8px; right: 8px; font: 600 .74rem var(--body); padding: 4px 9px; border-radius: 6px; border: 1px solid var(--line); background: var(--surface); color: var(--accent); cursor: pointer; }
+pre .copy:focus-visible { outline: 2px solid var(--accent); }
+.check { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.check label { display: flex; gap: 10px; align-items: flex-start; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; cursor: pointer; }
+.check input { margin-top: 4px; accent-color: var(--accent); }
+.check code { font-family: var(--mono); font-size: .86em; background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }
+.urls { display: grid; gap: 8px; margin-top: 10px; }
+.url { display: grid; grid-template-columns: 120px 1fr auto; gap: 10px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; min-width: 0; }
+.url .k { font-weight: 600; font-size: .9rem; }
+.url .v { font-family: var(--mono); font-size: .8rem; overflow-wrap: anywhere; min-width: 0; }
+.url .v a { color: var(--accent); text-decoration: none; }
+.url .v a:hover { text-decoration: underline; }
+@media (max-width: 640px) { .url { grid-template-columns: 1fr; } }
+.btn { font: 600 .78rem var(--body); padding: 5px 10px; border-radius: 6px; border: 1px solid var(--line); background: var(--surface-2); color: var(--accent); cursor: pointer; }
+.btn:focus-visible { outline: 2px solid var(--accent); }
+table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: .76rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.tbl { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+dl.gloss { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; margin: 0; }
+dl.gloss dt { font-weight: 600; font-family: var(--mono); font-size: .9rem; }
+dl.gloss dd { margin: 0; color: var(--fg); }
+@media (max-width: 640px) { dl.gloss { grid-template-columns: 1fr; } dl.gloss dd { margin-bottom: 8px; color: var(--muted); } }
+.msg { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; margin-top: 10px; }
+.msg div { background: var(--accent-soft); border-radius: 10px; padding: 12px 14px; font-size: .95rem; min-width: 0; }
+.msg b { display: block; font-family: var(--display); font-size: 1.15rem; margin-bottom: 2px; }
+.timer { display: inline-flex; align-items: center; gap: 10px; font-family: var(--mono); font-variant-numeric: tabular-nums; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 6px 8px 6px 14px; }
+.timer span { font-size: 1.05rem; min-width: 5ch; }
+.diagram { margin-top: 12px; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: #0b1626; }
+.diagram img { display: block; width: 100%; height: auto; max-width: 100%; }
+figcaption { font-size: .82rem; color: var(--muted); margin-top: 6px; }
+.note { font-size: .9rem; color: var(--muted); }
+footer { margin-top: 40px; padding-top: 14px; border-top: 1px solid var(--line); font-size: .85rem; color: var(--muted); }
+a { color: var(--accent); }
+@media (prefers-reduced-motion: no-preference) { .timeline a { transition: border-color .15s; } }
+</style>
+</head>
+<body>
+<main>
+<section class="hero">
+  <div class="eyebrow">Guion para presentar · Registros Activo-Activo</div>
+  <h1>Demo de resiliencia Activo-Activo en Azure</h1>
+  <p class="lead">Una aplicación crítica que sigue atendiendo cuando se cae una región completa: SPA cacheada en el navegador, dos regiones con API, Kafka y Redis en una VM, PostgreSQL con captura de cambios (Debezium) y replicación bidireccional. Duración sugerida: 15 minutos.</p>
+  <div class="chips">
+    <span class="chip"><b>Región A</b> Central US</span>
+    <span class="chip"><b>Región B</b> Canada Central</span>
+    <span class="chip"><b>Apagado automático</b> 20:00 CDMX</span>
+    <span class="chip"><b>Costo</b> ≈ 90 USD/mes con apagado nocturno</span>
+    <span class="chip"><b>Sin SSH</b> operación por <code>az vm run-command</code></span>
+  </div>
+  <div class="timeline" aria-label="Mapa de la demo">
+    <a href="#prep"><span class="t">T−10 min</span><br><span class="n">Preparación</span></a>
+    <a href="#escena0"><span class="t">0 · 3 min</span><br><span class="n">Normalidad</span></a>
+    <a href="#escena1"><span class="t">1 · 4 min</span><br><span class="n">Cae la región A</span></a>
+    <a href="#escena2"><span class="t">2 · 3 min</span><br><span class="n">Vuelve A</span></a>
+    <a href="#escena3"><span class="t">3 · 3 min</span><br><span class="n">Partición y conflicto</span></a>
+    <a href="#cierre"><span class="t">Cierre · 2 min</span><br><span class="n">Mensajes y costo</span></a>
+  </div>
+</section>
+
+<h2 id="prep">Preparación (10 minutos antes)</h2>
+<p class="note">Todo se hace desde la carpeta del repositorio con la suscripción donde está desplegada la demo activa en <code>az</code>. Marca cada punto; la lista se guarda en este navegador.</p>
+<ul class="check" id="checklist">
+  <li><label><input type="checkbox" id="c1"> <span>Encender el ambiente: <code>./scripts/start.sh</code>. Arranca PostgreSQL si la gobernanza lo detuvo de noche, enciende las VMs, repara las reglas del NSG de subred y espera la salud. Tarda 6 a 9 minutos.</span></label></li>
+  <li><label><input type="checkbox" id="c2"> <span>Confirmar estado: <code>./scripts/status.sh</code> debe mostrar Debezium <code>RUNNING</code>, Replicator vivo y <code>pendientes para el par=0</code> en ambas regiones.</span></label></li>
+  <li><label><input type="checkbox" id="c3"> <span>Datos de ejemplo: <code>./scripts/seed.sh A 3</code> y luego <code>./scripts/verify-sync.sh</code> (las dos bases deben ser idénticas).</span></label></li>
+  <li><label><input type="checkbox" id="c4"> <span>Abrir las ventanas del SPA (abajo): la automática, las fijadas y los dos visores de datos, uno por región, para que el cliente vea dónde cae cada escritura. Además una terminal visible con el repositorio. Opcional: el diagrama de arquitectura en otra pestaña.</span></label></li>
+  <li><label><input type="checkbox" id="c5"> <span>Decidir si se hará la escena 3 (partición). Si el tiempo es corto, se omite sin afectar el hilo.</span></label></li>
+</ul>
+<div class="urls">
+  <div class="url"><span class="k">Automática</span><span class="v"><a href="https://aa-xxxxxx-a.centralus.cloudapp.azure.com/app/" target="_blank" rel="noopener">https://aa-xxxxxx-a.centralus.cloudapp.azure.com/app/</a></span><button class="btn" data-copy="https://aa-xxxxxx-a.centralus.cloudapp.azure.com/app/">Copiar</button></div>
+  <div class="url"><span class="k">Fijada a A</span><span class="v"><a href="https://aa-xxxxxx-a.centralus.cloudapp.azure.com/app/?region=a" target="_blank" rel="noopener">https://aa-xxxxxx-a.centralus.cloudapp.azure.com/app/?region=a</a></span><button class="btn" data-copy="https://aa-xxxxxx-a.centralus.cloudapp.azure.com/app/?region=a">Copiar</button></div>
+  <div class="url"><span class="k">Fijada a B</span><span class="v"><a href="https://aa-xxxxxx-b.canadacentral.cloudapp.azure.com/app/?region=b" target="_blank" rel="noopener">https://aa-xxxxxx-b.canadacentral.cloudapp.azure.com/app/?region=b</a></span><button class="btn" data-copy="https://aa-xxxxxx-b.canadacentral.cloudapp.azure.com/app/?region=b">Copiar</button></div>
+  <div class="url"><span class="k">Visor A</span><span class="v"><a href="https://aa-xxxxxx-a.centralus.cloudapp.azure.com/app/visor.html?region=a" target="_blank" rel="noopener">https://aa-xxxxxx-a.centralus.cloudapp.azure.com/app/visor.html?region=a</a></span><button class="btn" data-copy="https://aa-xxxxxx-a.centralus.cloudapp.azure.com/app/visor.html?region=a">Copiar</button></div>
+  <div class="url"><span class="k">Visor B</span><span class="v"><a href="https://aa-xxxxxx-b.canadacentral.cloudapp.azure.com/app/visor.html?region=b" target="_blank" rel="noopener">https://aa-xxxxxx-b.canadacentral.cloudapp.azure.com/app/visor.html?region=b</a></span><button class="btn" data-copy="https://aa-xxxxxx-b.canadacentral.cloudapp.azure.com/app/visor.html?region=b">Copiar</button></div>
+  <div class="url"><span class="k">Estado A / B</span><span class="v"><a href="https://aa-xxxxxx-a.centralus.cloudapp.azure.com/status" target="_blank" rel="noopener">…a.centralus…/status</a> · <a href="https://aa-xxxxxx-b.canadacentral.cloudapp.azure.com/status" target="_blank" rel="noopener">…b.canadacentral…/status</a></span><span></span></div>
+</div>
+<p class="note">La ventana "automática" es el usuario final: no sabe de regiones; en su formulario eliges a qué región mandar cada registro. Los visores muestran la tabla de cada base en vivo y resaltan lo que llega por replicación. Si la región A está caída al abrir la ventana automática por primera vez, usa la URL de B con el mismo <code>/app/</code>.</p>
+
+<figure class="diagram">
+  <img src="architecture.svg" alt="Diagrama de arquitectura: SPA cacheado, dos regiones con VM (Caddy, API, Redis, Kafka, Debezium, Replicator) y PostgreSQL Flexible, replicación bidireccional por Kafka sobre peering global" width="1000" height="970">
+</figure>
+<figcaption>Diagrama para tener a mano. Lectura rápida: cada escritura va a la base local, Debezium la captura por el slot lógico, el Replicator de la otra región la consume del Kafka de origen por el peering y la aplica.</figcaption>
+
+<p style="margin-top:16px"><span class="timer" aria-live="off"><span id="clock">00:00</span><button class="btn" id="tstart">Iniciar</button><button class="btn" id="treset">Reiniciar</button></span> <span class="note">Cronómetro de la presentación (opcional).</span></p>
+
+<h2>Escenas</h2>
+
+<article class="scene" id="escena0">
+  <header><h3>Escena 0 · Normalidad: una escritura viaja de A a B</h3><span class="dur">3 min</span></header>
+  <p>En la ventana automática elige "Guardar en: Región A" y crea un registro (por ejemplo "Pedido 1001 · 2 cajas"). Mira el visor de B: la fila aparece resaltada como "replicado desde A".</p>
+  <div class="cols">
+    <div class="box see"><h3>Qué ve el público</h3><ul><li>En 1 a 3 segundos el registro aparece en B con la etiqueta <b>escrito en A</b> (y en el visor de B, resaltado como <b>replicado desde A</b>).</li><li>En la bitácora de B: "replicado … desde A (applied)".</li><li>Panel: Debezium RUNNING, Replicator vivo, cola → 0, lag de unos cientos de milisegundos.</li></ul></div>
+    <div class="box say"><h3>Qué decir</h3><ul><li>Cada región es completa y acepta escrituras: activo-activo, no activo-pasivo.</li><li>Debezium lee el WAL de Postgres por un slot lógico y publica el cambio en el Kafka local.</li><li>El Replicator de la otra región lo consume por una red privada (peering) y lo aplica; el regreso del mismo cambio se descarta como eco gracias a <code>origin_region</code>.</li></ul></div>
+  </div>
+  <p class="note">Cambia a "Guardar en: Región B", crea otro registro o edita uno (botón "editar") y muéstralo en el visor de A: la replicación es simétrica.</p>
+</article>
+
+<article class="scene" id="escena1">
+  <header><h3>Escena 1 · Cae la región A</h3><span class="dur">4 min</span></header>
+  <p>En la terminal, desasigna la VM de A. Mantén a la vista la ventana automática.</p>
+  <pre><code>./scripts/chaos.sh stop-vm A      # ≈ 35 s</code><button class="copy" type="button">Copiar</button></pre>
+  <div class="cols">
+    <div class="box see"><h3>Qué ve el público</h3><ul><li>El badge pasa a <b>Conectado a Región B (failover)</b> sin ningún error en pantalla; la bitácora registra "failover: Región A → Región B".</li><li>El usuario sigue creando y editando registros (hazlo en la ventana automática).</li><li>En el panel de B: <b>Cola → A: N eventos esperan a A</b> crece con cada escritura; el Replicator de B dice "Kafka A: NO alcanzable".</li></ul></div>
+    <div class="box say"><h3>Qué decir</h3><ul><li>El failover está en el navegador: sondea la salud cada 3 s y reintenta en la otra región en el mismo segundo. Cero interrupción percibida.</li><li>Las escrituras usan un identificador generado por el cliente: reintentar nunca duplica.</li><li>Kafka B conserva los eventos con los offsets del grupo <code>replicator-a</code>: la cola espera a que A vuelva, no se pierde nada.</li></ul></div>
+  </div>
+  <p class="note">Variante rápida (20 s en lugar de 35 s): <code>./scripts/chaos.sh stop-api A</code> detiene solo la API y Caddy; Kafka y el Replicator de A siguen vivos, así que la cola de B no crece. Variante base de datos: <code>./scripts/chaos.sh stop-db A</code>.</p>
+</article>
+
+<article class="scene" id="escena2">
+  <header><h3>Escena 2 · Vuelve A y se pone al día</h3><span class="dur">3 min</span></header>
+  <pre><code>./scripts/chaos.sh start-vm A     # ≈ 75 s hasta /health
+./scripts/verify-sync.sh          # conteo + hash idénticos</code><button class="copy" type="button">Copiar</button></pre>
+  <div class="cols">
+    <div class="box see"><h3>Qué ve el público</h3><ul><li>La cola de B baja a 0 en segundos.</li><li>En la bitácora de la ventana fijada a A aparecen en ráfaga los "replicado … desde B".</li><li>La ventana automática regresa a A tras tres sondeos sanos ("failback").</li><li><code>verify-sync.sh</code> imprime el mismo número de filas y el mismo hash en A y B.</li></ul></div>
+    <div class="box say"><h3>Qué decir</h3><ul><li>El Replicator de A reanuda exactamente donde iba: los offsets viven en el Kafka de origen.</li><li>RPO: lo que A escribió justo antes de caer y B no alcanzó a leer llega ahora, porque el log de Kafka A está en disco. Es la naturaleza del activo-activo asíncrono.</li><li>El failback tiene histéresis para evitar rebotes.</li></ul></div>
+  </div>
+</article>
+
+<article class="scene" id="escena3">
+  <header><h3>Escena 3 · Partición y conflicto (opcional)</h3><span class="dur">3 min</span></header>
+  <pre><code>./scripts/chaos.sh partition      # bloquea 9092 entre las VNets
+# editar el texto del MISMO registro en la ventana fijada a A y en la fijada a B
+./scripts/chaos.sh heal
+./scripts/verify-sync.sh</code><button class="copy" type="button">Copiar</button></pre>
+  <div class="cols">
+    <div class="box see"><h3>Qué ve el público</h3><ul><li>Ambas regiones siguen aceptando escrituras; las colas crecen en los dos paneles.</li><li>Al sanar, los Replicators drenan y el registro queda con la última escritura según <code>updated_at</code>.</li><li>Las bases vuelven a coincidir.</li></ul></div>
+    <div class="box say"><h3>Qué decir</h3><ul><li>Regla de conflicto: gana la última escritura por reloj del servidor Postgres; empate → región alfabéticamente menor. Determinista y explicable.</li><li>En producción: propiedad por región (home region) o relojes híbridos; aquí se muestra el mecanismo mínimo.</li></ul></div>
+  </div>
+</article>
+
+<article class="scene" id="cierre">
+  <header><h3>Cierre</h3><span class="dur">2 min</span></header>
+  <div class="msg">
+    <div><b>0 interrupción</b> El navegador conmuta de región en el mismo segundo y la app está cacheada por el Service Worker.</div>
+    <div><b>Nada se pierde</b> Kafka guarda la cola de cada región hasta que la otra vuelve; los offsets viven en el origen.</div>
+    <div><b>Sin puertos de gestión</b> Ni SSH ni RDP: las VMs se operan por el agente de Azure. Postgres y Kafka nunca salen a Internet.</div>
+    <div><b>≈ 90 USD/mes</b> Dos VMs Arm64, dos PostgreSQL B1ms, apagado automático a las 20:00. Static Web Apps es gratis.</div>
+  </div>
+  <p class="note">Si preguntan por producción: Front Door al frente, Kafka con 3 brokers y TLS, Postgres con HA zonal, propiedad de registros por región, Key Vault y observabilidad. Está en <code>docs/decisiones.md</code>.</p>
+</article>
+
+<h2>Si algo falla durante la demo</h2>
+<div class="tbl"><table>
+  <thead><tr><th>Síntoma</th><th>Qué hacer</th></tr></thead>
+  <tbody>
+    <tr><td>Una región no responde por HTTPS tras encender</td><td><code>./scripts/fix-subnet-nsg.sh</code> (la gobernanza asocia NSG propios a las subredes) y luego <code>./scripts/wait-healthy.sh</code>.</td></tr>
+    <tr><td><code>/health</code> en 503</td><td><code>./scripts/status.sh</code>. Postgres detenido → <code>./scripts/start.sh</code>. VM apagada → <code>./scripts/chaos.sh start-vm A</code>.</td></tr>
+    <tr><td>Debezium no está RUNNING</td><td><code>./scripts/configure-cdc.sh A</code> (idempotente). Logs: <code>run_on_vm A 'cd /opt/aa &amp;&amp; docker compose logs --tail 50 connect'</code>.</td></tr>
+    <tr><td>La cola no baja al volver la región</td><td>Revisa que no quede la regla <code>ChaosDenyKafka</code>: <code>./scripts/chaos.sh heal</code>. Logs del replicator en la VM.</td></tr>
+    <tr><td>El SPA no carga</td><td>Usa la URL <code>/app/</code> de la otra región. Si cambió una API: <code>./scripts/push-bundle.sh A</code> y <code>B</code>.</td></tr>
+    <tr><td>WAL retenido grande en el panel</td><td>Normal tras días con la VM apagada y Postgres encendido; baja a KiB en cuanto Debezium reanuda. Para evitarlo: <code>./scripts/stop.sh --db</code>.</td></tr>
+  </tbody>
+</table></div>
+
+<h2>Glosario para preguntas del público</h2>
+<dl class="gloss">
+  <dt>WAL</dt><dd>Write-Ahead Log de PostgreSQL: el registro secuencial donde se anota cada cambio antes de aplicarlo a las tablas. Sirve para recuperación y es lo que Debezium lee para capturar cambios.</dd>
+  <dt>Slot de replicación</dt><dd>Marcador que obliga a Postgres a conservar el WAL hasta que el consumidor (Debezium) confirme que lo procesó. Si el consumidor está apagado, el WAL retenido crece.</dd>
+  <dt>CDC</dt><dd>Change Data Capture: convertir cada inserción, actualización o borrado en un evento. Aquí lo hace Debezium sobre Kafka Connect con el plugin <code>pgoutput</code>.</dd>
+  <dt>Eco</dt><dd>Un cambio replicado de A a B vuelve a capturarse en B y regresa a A. Se descarta porque trae <code>origin_region = a</code>.</dd>
+  <dt>LWW</dt><dd>Last Writer Wins: ante dos versiones del mismo registro gana la de <code>updated_at</code> más reciente (reloj del servidor Postgres).</dd>
+  <dt>RPO / RTO</dt><dd>Pérdida máxima de datos tolerable / tiempo de recuperación. En la demo: RPO = segundos de lag de replicación; RTO percibido por el usuario = 0 (el navegador conmuta solo).</dd>
+  <dt>Peering</dt><dd>Conexión privada entre las VNets de las dos regiones; por ahí viaja Kafka (puerto 9092) sin exponerse a Internet.</dd>
+  <dt>Service Worker</dt><dd>Script del navegador que cachea el app-shell del SPA: la aplicación carga aunque el hosting no responda.</dd>
+</dl>
+
+<footer>Repositorio <code>~/Code/demoactiveactive</code> · guion detallado en <code>docs/runbook-demo.md</code> · arquitectura en <code>docs/architecture.md</code> · costos y políticas en <code>docs/costos-y-politicas.md</code>. Tiempos medidos el 21 y 26 de octubre de 2026.</footer>
+</main>
+<script>
+(function () {
+  function copyText(text, btn) {
+    var done = function () { var old = btn.textContent; btn.textContent = 'Copiado'; setTimeout(function () { btn.textContent = old; }, 1400); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done, function () { fallback(text, btn, done); });
+    } else { fallback(text, btn, done); }
+  }
+  function fallback(text, btn, done) {
+    var ta = document.createElement('textarea'); ta.value = text; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.left = '-9999px';
+    document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); done(); } catch (e) { btn.textContent = 'Selecciona y copia'; } document.body.removeChild(ta);
+  }
+  document.querySelectorAll('pre .copy').forEach(function (btn) {
+    btn.addEventListener('click', function () { copyText(btn.parentNode.querySelector('code').textContent, btn); });
+  });
+  document.querySelectorAll('[data-copy]').forEach(function (btn) {
+    btn.addEventListener('click', function () { copyText(btn.getAttribute('data-copy'), btn); });
+  });
+  var KEY = 'aa-guion-checklist';
+  var boxes = document.querySelectorAll('#checklist input[type=checkbox]');
+  try { var saved = JSON.parse(localStorage.getItem(KEY) || '{}'); boxes.forEach(function (b) { b.checked = !!saved[b.id]; }); } catch (e) {}
+  boxes.forEach(function (b) { b.addEventListener('change', function () {
+    try { var s = {}; boxes.forEach(function (x) { s[x.id] = x.checked; }); localStorage.setItem(KEY, JSON.stringify(s)); } catch (e) {}
+  }); });
+  var t0 = null, acc = 0, iv = null, clock = document.getElementById('clock'), bs = document.getElementById('tstart');
+  function render() { var ms = acc + (t0 ? Date.now() - t0 : 0); var s = Math.floor(ms / 1000); clock.textContent = String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); }
+  bs.addEventListener('click', function () {
+    if (t0) { acc += Date.now() - t0; t0 = null; clearInterval(iv); bs.textContent = 'Continuar'; }
+    else { t0 = Date.now(); iv = setInterval(render, 500); bs.textContent = 'Pausar'; }
+  });
+  document.getElementById('treset').addEventListener('click', function () { acc = 0; t0 = null; clearInterval(iv); bs.textContent = 'Iniciar'; render(); });
+})();
+</script>
+</body>
+</html>

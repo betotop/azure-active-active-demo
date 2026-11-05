@@ -1,0 +1,9 @@
+{
+  "name": "Registros (demo activo-activo)",
+  "short_name": "Registros AA",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0b1626",
+  "theme_color": "#0b1626",
+  "icons": [{ "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}

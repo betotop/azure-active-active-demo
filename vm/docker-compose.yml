@@ -1,0 +1,119 @@
+# Pila de una región. Variables en /opt/aa/.env (generado por scripts/push-bundle.sh).
+name: aa
+
+services:
+  caddy:
+    image: caddy:2
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      PUBLIC_FQDN: ${PUBLIC_FQDN}
+      ACME_EMAIL: ${ACME_EMAIL}
+      # Consola de Kafka en /kafka-ui/: usuario y hash bcrypt de basic_auth (los escribe scripts/push-bundle.sh en .env).
+      KAFKA_UI_USER: ${KAFKA_UI_USER:-demo}
+      KAFKA_UI_HASH: ${KAFKA_UI_HASH}
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./web:/srv/web:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+
+  api:
+    build: ./api
+    restart: always
+    env_file: .env
+    depends_on:
+      - redis
+      - kafka
+
+  replicator:
+    build: ./replicator
+    restart: always
+    env_file: .env
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru"]
+
+  kafka:
+    image: apache/kafka:3.9.1
+    restart: always
+    ports:
+      # Solo en la IP privada: lo consume el Replicator de la región par por el peering.
+      - "${PRIVATE_IP}:9092:9092"
+    environment:
+      CLUSTER_ID: ${KAFKA_CLUSTER_ID}
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_LISTENERS: EXTERNAL://0.0.0.0:9092,INTERNAL://0.0.0.0:19092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: EXTERNAL://${PRIVATE_IP}:9092,INTERNAL://kafka:19092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: EXTERNAL:PLAINTEXT,INTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_NUM_PARTITIONS: 1
+      KAFKA_LOG_RETENTION_HOURS: 168
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_HEAP_OPTS: "-Xms384m -Xmx512m"
+    volumes:
+      - ./data/kafka:/var/lib/kafka/data
+
+  connect:
+    image: quay.io/debezium/connect:3.1
+    restart: always
+    depends_on:
+      - kafka
+    ports:
+      - "127.0.0.1:8083:8083"
+    environment:
+      BOOTSTRAP_SERVERS: kafka:19092
+      GROUP_ID: connect-${REGION}
+      CONFIG_STORAGE_TOPIC: _connect_configs
+      OFFSET_STORAGE_TOPIC: _connect_offsets
+      STATUS_STORAGE_TOPIC: _connect_status
+      CONFIG_STORAGE_REPLICATION_FACTOR: 1
+      OFFSET_STORAGE_REPLICATION_FACTOR: 1
+      STATUS_STORAGE_REPLICATION_FACTOR: 1
+      KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      CONNECT_KEY_CONVERTER_SCHEMAS_ENABLE: "false"
+      CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE: "false"
+      HEAP_OPTS: "-Xms256m -Xmx768m"
+      KAFKA_HEAP_OPTS: "-Xms256m -Xmx768m"
+
+  # Consola gráfica de Kafka (Kafbat UI): brokers, topics y mensajes, grupos con lag, Kafka Connect. Solo escucha dentro
+  # de la red de Docker; Caddy la publica en https://<PUBLIC_FQDN>/kafka-ui/ con usuario y contraseña. Imagen con
+  # manifest arm64 (comprobado el 2026-11-04). Sin costo extra: corre en la misma VM.
+  kafka-ui:
+    image: ghcr.io/kafbat/kafka-ui:v1.5.0
+    restart: always
+    depends_on:
+      - kafka
+      - connect
+    environment:
+      KAFKA_CLUSTERS_0_NAME: region-${REGION}
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:19092
+      KAFKA_CLUSTERS_0_KAFKACONNECT_0_NAME: connect-${REGION}
+      KAFKA_CLUSTERS_0_KAFKACONNECT_0_ADDRESS: http://connect:8083
+      # Solo lectura (KAFKA_UI_READONLY en deploy.env): ver sí, borrar topics / producir / mover offsets no.
+      KAFKA_CLUSTERS_0_READONLY: ${KAFKA_UI_READONLY:-true}
+      SERVER_SERVLET_CONTEXT_PATH: /kafka-ui
+      DYNAMIC_CONFIG_ENABLED: "false"
+      # La VM tiene 8 GiB y ya corren Kafka (512 MB de heap) y Connect (768 MB): la consola se limita a 400 MB.
+      JAVA_OPTS: "-Xms128m -Xmx400m"
+
+volumes:
+  caddy_data: {}
+  caddy_config: {}

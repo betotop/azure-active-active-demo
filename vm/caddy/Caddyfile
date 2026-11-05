@@ -1,0 +1,34 @@
+{
+	email {$ACME_EMAIL}
+}
+
+{$PUBLIC_FQDN} {
+	encode gzip
+	header -Server
+
+	# El SPA también se sirve desde cada región en /app/ (respaldo del hosting global en Static Web Apps).
+	redir /app /app/ 301
+	handle_path /app/* {
+		root * /srv/web
+		# Todo el SPA se revalida (ETag) en cada carga: el navegador ya lo cachea con el Service Worker, y así una
+		# publicación nueva se ve de inmediato en vez de esperar la caché heurística del navegador.
+		header Cache-Control no-cache
+		try_files {path} /index.html
+		file_server
+	}
+
+	# Consola de Kafka (Kafbat UI) con usuario y contraseña: KAFKA_UI_USER y el hash bcrypt KAFKA_UI_HASH vienen del
+	# .env de la VM (scripts/push-bundle.sh). Va antes del handle de la API, que atrapa todo lo demás.
+	redir /kafka-ui /kafka-ui/ 301
+	handle /kafka-ui/* {
+		basic_auth {
+			{$KAFKA_UI_USER} {$KAFKA_UI_HASH}
+		}
+		reverse_proxy kafka-ui:8080
+	}
+
+	# Todo lo demás es la API de la región.
+	handle {
+		reverse_proxy api:8000
+	}
+}

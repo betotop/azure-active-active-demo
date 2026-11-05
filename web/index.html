@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Registros · Activo-Activo</title>
+  <meta name="theme-color" content="#0b1626">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <img src="./icon.svg" alt="" width="40" height="40">
+      <div>
+        <h1>Registros · Demo Activo-Activo en Azure</h1>
+        <p class="sub">Dos regiones escribiendo a la vez · replicación bidireccional por Kafka · failover en el navegador</p>
+      </div>
+    </div>
+    <div class="conn">
+      <div id="active-badge" class="badge wait">Conectando…</div>
+      <label class="mode">Leer de
+        <select id="mode">
+          <option value="auto">Automática (preferida A)</option>
+          <option value="a">Fijar A</option>
+          <option value="b">Fijar B</option>
+        </select>
+      </label>
+      <a class="badge dim" href="./visor.html?region=a" target="_blank" rel="noopener" title="Tabla de la base de A en vivo">Visor A ↗</a>
+      <a class="badge dim" href="./visor.html?region=b" target="_blank" rel="noopener" title="Tabla de la base de B en vivo">Visor B ↗</a>
+      <div id="sw-badge" class="badge dim" title="Service Worker">SW: —</div>
+    </div>
+  </header>
+
+  <main>
+    <section class="col">
+      <div class="card">
+        <h2>Nuevo registro</h2>
+        <form id="new-form" autocomplete="off">
+          <input id="texto" placeholder="Escribe cualquier texto (un pedido, un cliente, un pago…)" required maxlength="200">
+          <select id="destino" title="Región a la que se envía la escritura">
+            <option value="auto">Guardar en: automática</option>
+            <option value="a">Guardar en: Región A</option>
+            <option value="b">Guardar en: Región B</option>
+          </select>
+          <button type="submit">Guardar</button>
+        </form>
+        <p class="hint">Automática = la región activa del badge, con failover a la otra. Región A o B = se escribe directo ahí; si no responde, el registro no se guarda y se avisa. Editar y eliminar usan la misma elección.</p>
+        <p id="pending-info" class="dim small hidden"></p>
+      </div>
+      <div class="card">
+        <div class="card-head"><h2>Registros</h2><span id="list-meta" class="dim small"></span></div>
+        <ul id="tickets" class="tickets"></ul>
+      </div>
+    </section>
+
+    <section class="col">
+      <div class="card">
+        <div class="card-head"><h2>Panel de resiliencia</h2><span id="panel-meta" class="dim small"></span></div>
+        <div class="regions">
+          <div class="region" id="region-a"><h3>Región A</h3><p class="dim">sin datos</p></div>
+          <div class="region" id="region-b"><h3>Región B</h3><p class="dim">sin datos</p></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h2>Bitácora</h2><button id="clear-log" class="ghost">limpiar</button></div>
+        <ul id="log" class="log"></ul>
+      </div>
+    </section>
+  </main>
+
+  <footer><span id="cfg-meta" class="dim small">config.json: cargando…</span></footer>
+  <script src="./app.js" type="module"></script>
+</body>
+</html>

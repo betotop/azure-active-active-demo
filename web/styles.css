@@ -1,0 +1,93 @@
+:root {
+  --bg: #0b1626; --zone: #0e2038; --box: #122c4d; --mini: #16233c; --line: #2c5f9e; --line2: #3a5a80;
+  --txt: #e6edf7; --txt2: #9fb0c9; --blue: #4da3ff; --teal: #58d1c9; --purple: #c084fc; --green: #4ade80;
+  --amber: #fbbf24; --red: #f87171;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--txt); font: 14px/1.45 "Segoe UI", Inter, "Helvetica Neue", Arial, sans-serif; }
+header { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 14px 20px; border-bottom: 1px solid var(--line2); background: var(--zone); flex-wrap: wrap; }
+.brand { display: flex; align-items: center; gap: 12px; }
+h1 { font-size: 18px; margin: 0; }
+h2 { font-size: 15px; margin: 0 0 10px; color: var(--txt); }
+h3 { font-size: 14px; margin: 0 0 8px; }
+.sub { margin: 2px 0 0; color: var(--txt2); font-size: 12px; }
+.conn { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.mode { color: var(--txt2); font-size: 12px; display: flex; gap: 6px; align-items: center; }
+select, input, button { font: inherit; border-radius: 8px; border: 1px solid var(--line2); background: var(--mini); color: var(--txt); padding: 8px 10px; }
+button { background: var(--blue); color: #061222; border: none; font-weight: 600; cursor: pointer; }
+button.ghost { background: transparent; color: var(--txt2); border: 1px solid var(--line2); font-weight: 400; padding: 4px 8px; font-size: 12px; }
+button.small { padding: 4px 8px; font-size: 12px; }
+button.danger { background: transparent; color: var(--red); border: 1px solid var(--red); }
+.badge { padding: 5px 12px; border-radius: 999px; font-size: 12px; font-weight: 600; border: 1px solid; }
+.badge.ok { color: var(--green); border-color: var(--green); background: rgba(74,222,128,.12); }
+.badge.warn { color: var(--amber); border-color: var(--amber); background: rgba(251,191,36,.12); }
+.badge.down { color: var(--red); border-color: var(--red); background: rgba(248,113,113,.12); }
+.badge.wait, .badge.dim { color: var(--txt2); border-color: var(--line2); }
+main { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 16px 20px; max-width: 1400px; margin: 0 auto; }
+@media (max-width: 960px) { main { grid-template-columns: 1fr; } }
+.col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.card { background: var(--zone); border: 1px solid var(--line2); border-radius: 12px; padding: 14px 16px; }
+.card-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 8px; }
+.card-head h2 { margin: 0; }
+form { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; }
+.dim { color: var(--txt2); }
+.small { font-size: 12px; }
+.hidden { display: none; }
+.tickets { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; max-height: 70vh; overflow: auto; }
+.ticket { background: var(--mini); border: 1px solid var(--line2); border-radius: 10px; padding: 10px 12px; display: grid; grid-template-columns: 1fr auto; gap: 6px 10px; align-items: center; }
+.ticket.new { animation: flash 1.2s ease-out; }
+@keyframes flash { from { box-shadow: 0 0 0 2px var(--teal); } to { box-shadow: none; } }
+.ticket .title { font-weight: 600; }
+.ticket .meta { color: var(--txt2); font-size: 12px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.ticket .actions { display: flex; gap: 6px; grid-row: span 2; align-items: center; }
+.chip { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 11px; border: 1px solid; }
+.chip.a { color: var(--green); border-color: var(--green); }
+.chip.b { color: var(--amber); border-color: var(--amber); }
+.chip.e-abierto { color: var(--blue); border-color: var(--blue); }
+.chip.e-en_proceso { color: var(--amber); border-color: var(--amber); }
+.chip.e-resuelto { color: var(--green); border-color: var(--green); }
+.chip.e-cerrado { color: var(--txt2); border-color: var(--line2); }
+.chip.p-critica { color: var(--red); border-color: var(--red); }
+.chip.p-alta { color: var(--amber); border-color: var(--amber); }
+.chip.p-media, .chip.p-baja { color: var(--txt2); border-color: var(--line2); }
+.regions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media (max-width: 600px) { .regions { grid-template-columns: 1fr; } }
+.region { background: var(--mini); border: 1px solid var(--line2); border-radius: 10px; padding: 10px 12px; font-size: 12.5px; }
+.region.active { border-color: var(--blue); box-shadow: 0 0 0 1px var(--blue) inset; }
+.region.down { border-color: var(--red); opacity: .85; }
+.region h3 { display: flex; justify-content: space-between; align-items: center; }
+.region .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 6px; background: var(--txt2); }
+.region .dot.ok { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.region .dot.down { background: var(--red); box-shadow: 0 0 6px var(--red); }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; }
+.kv dt { color: var(--txt2); }
+.kv dd { margin: 0; }
+.kv .big { font-size: 20px; font-weight: 700; color: var(--amber); }
+.log { list-style: none; margin: 0; padding: 0; font-size: 12px; max-height: 40vh; overflow: auto; display: flex; flex-direction: column; gap: 3px; }
+.log li { display: grid; grid-template-columns: 62px 1fr; gap: 8px; border-bottom: 1px dashed var(--line2); padding: 3px 0; }
+.log .t { color: var(--txt2); font-variant-numeric: tabular-nums; }
+.log .k-failover { color: var(--amber); font-weight: 600; }
+.log .k-failback { color: var(--green); font-weight: 600; }
+.log .k-error { color: var(--red); }
+.log .k-replicated { color: var(--purple); }
+.log .k-write { color: var(--teal); }
+footer { padding: 8px 20px 20px; text-align: center; }
+/* --- formulario: pista bajo el formulario y enlaces con forma de badge --- */
+.hint { color: var(--txt2); font-size: 12px; margin: 8px 0 0; }
+a.badge { text-decoration: none; }
+a.badge:hover { color: var(--txt); border-color: var(--blue); }
+/* --- visor de datos (visor.html): una columna, tabla y resaltado de filas nuevas/editadas --- */
+main.one { grid-template-columns: 1fr; }
+table.datos { width: 100%; border-collapse: collapse; font-size: 13px; }
+.datos th { text-align: left; color: var(--txt2); font-weight: 600; font-size: 12px; padding: 6px 8px; border-bottom: 1px solid var(--line2); }
+.datos td { padding: 7px 8px; border-bottom: 1px dashed var(--line2); vertical-align: top; }
+.datos td.t, .datos td.mono { color: var(--txt2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.datos td.txt { font-weight: 600; width: 55%; }
+.datos tr.new { animation: flash-new 2.5s ease-out; }
+.datos tr.changed { animation: flash-changed 2.5s ease-out; }
+@keyframes flash-new { from { background: rgba(88,209,201,.45); } to { background: transparent; } }
+@keyframes flash-changed { from { background: rgba(192,132,252,.45); } to { background: transparent; } }
+body.visor.region-a header { border-bottom: 3px solid var(--green); }
+body.visor.region-b header { border-bottom: 3px solid var(--amber); }
+body.visor.down main { opacity: .55; }
+.log .k-info { color: var(--txt2); }

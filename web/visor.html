@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Visor de datos · Activo-Activo</title>
+  <meta name="theme-color" content="#0b1626">
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body class="visor">
+  <header>
+    <div class="brand">
+      <img src="./icon.svg" alt="" width="40" height="40">
+      <div>
+        <h1 id="titulo">Visor de datos</h1>
+        <p class="sub">Tabla <code>tickets</code> leída directamente de la base de esta región, sin failover · se actualiza en vivo</p>
+      </div>
+    </div>
+    <div class="conn">
+      <div id="estado" class="badge wait">Conectando…</div>
+      <a id="otro" class="badge dim" href="./visor.html">Abrir el otro visor ↗</a>
+      <a class="badge dim" href="./">Ir a la app ↗</a>
+    </div>
+  </header>
+
+  <main class="one">
+    <div class="card">
+      <div class="card-head"><h2>Registros en <span id="nombre">…</span></h2><span class="dim small"><span id="count">0</span> filas · SSE + sondeo cada 2 s · fila nueva en verde azulado, editada en morado</span></div>
+      <table class="datos">
+        <thead><tr><th>Hora (updated_at)</th><th>Texto</th><th>Escrito en</th><th>Folio</th><th>Versión</th></tr></thead>
+        <tbody id="filas"></tbody>
+      </table>
+      <p id="empty" class="dim small hidden">Sin registros todavía: crea uno desde la app.</p>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>Eventos de esta región</h2><button id="clear-log" class="ghost">limpiar</button></div>
+      <ul id="log" class="log"></ul>
+    </div>
+  </main>
+
+  <footer><span id="cfg-meta" class="dim small">config.json: cargando…</span></footer>
+  <script src="./visor.js" type="module"></script>
+</body>
+</html>

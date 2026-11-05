@@ -1,0 +1,11 @@
+{
+  "preferred": "a",
+  "regions": [
+    { "key": "a", "name": "Región A · Central US", "url": "https://aa-xxxxxx-a.centralus.cloudapp.azure.com" },
+    { "key": "b", "name": "Región B · Canada Central", "url": "https://aa-xxxxxx-b.canadacentral.cloudapp.azure.com" }
+  ],
+  "probe_interval_ms": 3000,
+  "probe_timeout_ms": 1500,
+  "request_timeout_ms": 2500,
+  "failback_healthy_probes": 3
+}

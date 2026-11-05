@@ -1,0 +1,12 @@
+.secrets/
+.env.deploy
+.deploy-outputs.json
+.push-*.log
+.cdc-*.log
+web/config.json
+web/docs/
+node_modules/
+__pycache__/
+*.pyc
+.DS_Store
+.claude/handoff/
